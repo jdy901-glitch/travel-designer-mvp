@@ -1,14 +1,14 @@
 import streamlit as st
 import json
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 # --- 페이지 설정 ---
 st.set_page_config(page_title="AI 여행 디자이너", page_icon="✈️", layout="centered")
 
-# --- Gemini API 설정 ---
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-generation_config = {"response_mime_type": "application/json"}
-model = genai.GenerativeModel('gemini-1.5-flash', generation_config=generation_config)
+# --- Gemini API 설정 (최신 SDK 적용!) ---
+# 구형 라이브러리 대신 2026년형 최신 google-genai 라이브러리를 사용합니다.
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 # --- 임시 저장소(Session State) 초기화 ---
 if "itinerary" not in st.session_state:
@@ -19,7 +19,14 @@ if "locked_states" not in st.session_state:
 # --- 제미나이 호출 함수 ---
 def ask_ai_designer(prompt):
     try:
-        response = model.generate_content(prompt)
+        # 최신 문법에 맞춘 제미나이 호출 방식
+        response = client.models.generate_content(
+            model='gemini-2.0-flash', 
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+            )
+        )
         raw_text = response.text.strip()
         if raw_text.startswith("```json"):
             raw_text = raw_text.replace("```json", "", 1)
@@ -27,7 +34,8 @@ def ask_ai_designer(prompt):
             raw_text = raw_text.rsplit("```", 1)[0]
         return json.loads(raw_text.strip())
     except Exception as e:
-        st.error("AI가 여행 일정을 짜는 중 고민에 빠졌습니다. 다시 시도해 주세요.")
+        # 혹시라도 에러가 나면 무슨 에러인지 화면에 직접 띄워주는 기능 추가
+        st.error(f"AI가 여행 일정을 짜는 중 고민에 빠졌습니다: {e}")
         return []
 
 # --- 사이드바: 조건 입력 ---
@@ -36,7 +44,7 @@ with st.sidebar:
     destination = st.text_input("목적지", placeholder="예: 나트랑, 오사카, 제주도")
     days = st.number_input("여행 기간 (일)", min_value=1, max_value=14, value=3)
     intensity = st.slider("희망 여행 강도", min_value=1, max_value=10, value=5, help="1: 휴양 ~ 10: 빡빡한 일정")
-    companions = st.text_input("인원 구성", placeholder="예: 가족 여행, 커플")
+    companions = st.text_input("인원 구성", placeholder="예: 21개월 아기, 아내, 나")
     base_comment = st.text_area("추가 요청사항 (선택)", placeholder="예: 동선은 최대한 짧게")
     
     if st.button("✨ 첫 번째 여행 코스 짜기", use_container_width=True):
