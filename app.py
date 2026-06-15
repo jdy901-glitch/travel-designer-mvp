@@ -6,11 +6,10 @@ import google.generativeai as genai
 st.set_page_config(page_title="AI 여행 디자이너", page_icon="✈️", layout="centered")
 
 # --- Gemini API 설정 ---
-# 새 프로젝트에서 발급받은 새 열쇠를 꺼내옵니다.
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-generation_config = {"response_mime_type": "application/json"}
-# 가장 안정적이고 무료 한도가 넉넉한 1.5 flash 모델 사용
-model = genai.GenerativeModel('gemini-1.5-flash', generation_config=generation_config)
+# 💡 에러를 내던 1.5나 2.0 숫자를 빼고, 구글이 무조건 열어주는 가장 기본 깡통 모델(gemini-pro)로 우회합니다.
+# 💡 JSON 강제 설정도 에러의 원인이 될 수 있어 아예 빼버렸습니다.
+model = genai.GenerativeModel('gemini-pro')
 
 # --- 임시 저장소(Session State) 초기화 ---
 if "itinerary" not in st.session_state:
@@ -23,10 +22,16 @@ def ask_ai_designer(prompt):
     try:
         response = model.generate_content(prompt)
         raw_text = response.text.strip()
+        
+        # 찌꺼기 텍스트 걷어내기 (더 강력하게 수정)
         if raw_text.startswith("```json"):
             raw_text = raw_text.replace("```json", "", 1)
+        elif raw_text.startswith("```"):
+            raw_text = raw_text.replace("```", "", 1)
+            
         if raw_text.endswith("```"):
             raw_text = raw_text.rsplit("```", 1)[0]
+            
         return json.loads(raw_text.strip())
     except Exception as e:
         st.error(f"AI가 여행 일정을 짜는 중 고민에 빠졌습니다: {e}")
