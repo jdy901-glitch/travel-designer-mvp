@@ -1,14 +1,16 @@
 import streamlit as st
 import json
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 # --- 페이지 설정 ---
 st.set_page_config(page_title="AI 여행 디자이너", page_icon="✈️", layout="centered")
 
 # --- Gemini API 설정 ---
-# 새 프로젝트에서 발급받으신 새 열쇠를 그대로 사용합니다.
-client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+# 새 프로젝트에서 발급받은 새 열쇠를 꺼내옵니다.
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+generation_config = {"response_mime_type": "application/json"}
+# 가장 안정적이고 무료 한도가 넉넉한 1.5 flash 모델 사용
+model = genai.GenerativeModel('gemini-1.5-flash', generation_config=generation_config)
 
 # --- 임시 저장소(Session State) 초기화 ---
 if "itinerary" not in st.session_state:
@@ -19,14 +21,7 @@ if "locked_states" not in st.session_state:
 # --- 제미나이 호출 함수 ---
 def ask_ai_designer(prompt):
     try:
-        # 💡 새 API 키와 연동되어 무료로 안정적이게 가동되는 1.5-flash 모델입니다.
-        response = client.models.generate_content(
-            model='gemini-1.5-flash', 
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-            )
-        )
+        response = model.generate_content(prompt)
         raw_text = response.text.strip()
         if raw_text.startswith("```json"):
             raw_text = raw_text.replace("```json", "", 1)
