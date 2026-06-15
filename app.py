@@ -13,38 +13,57 @@ if "itinerary" not in st.session_state:
 if "locked_states" not in st.session_state:
     st.session_state.locked_states = {}
 
-# --- 제미나이 직통 호출 함수 (SDK 미사용) ---
+# --- 제미나이 자동 생존 호출 함수 ---
 def ask_ai_designer(prompt):
-    # 구글 라이브러리 없이 직접 서버로 요청을 쏩니다. (버전 꼬임 절대 없음)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
-    headers = {'Content-Type': 'application/json'}
-    data = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"responseMimeType": "application/json"}
-    }
-    
+    # 1. 내 열쇠로 접근 가능한 구글 모델 싹 다 뒤지기
+    list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={API_KEY}"
     try:
-        response = requests.post(url, headers=headers, json=data)
-        
-        if response.status_code != 200:
-            st.error(f"구글 서버 거절: {response.text}")
+        models_res = requests.get(list_url)
+        if models_res.status_code != 200:
+            st.error("API 키가 유효하지 않거나 구글 서버가 응답하지 않습니다.")
             return []
-            
-        result = response.json()
-        raw_text = result['candidates'][0]['content']['parts'][0]['text'].strip()
         
-        # 마크다운 찌꺼기 걷어내기
-        if raw_text.startswith("```json"):
-            raw_text = raw_text.replace("```json", "", 1)
-        elif raw_text.startswith("```"):
-            raw_text = raw_text.replace("```", "", 1)
-        if raw_text.endswith("```"):
-            raw_text = raw_text.rsplit("```", 1)[0]
+        models_data = models_res.json()
+        valid_models = [m['name'] for m in models_data.get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
+        
+        if not valid_models:
+            st.error("이 API 키로 쓸 수 있는 AI 모델이 하나도 없습니다.")
+            return []
+
+        # 2. 똑똑한 최신 모델(flash, 2)부터 순서대로 찔러보기
+        valid_models = sorted(valid_models, key=lambda x: ('flash' in x, '2' in x), reverse=True)
+
+        headers = {'Content-Type': 'application/json'}
+        data = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"responseMimeType": "application/json"}
+        }
+
+        # 3. 살아있는 모델을 찾을 때까지 반복해서 요청 보내기
+        for model_name in valid_models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/{model_name}:generateContent?key={API_KEY}"
+            response = requests.post(url, headers=headers, json=data)
             
-        return json.loads(raw_text.strip())
+            if response.status_code == 200:
+                # 💡 성공! 응답받은 모델로 코스 생성 완료
+                result = response.json()
+                raw_text = result['candidates'][0]['content']['parts'][0]['text'].strip()
+                
+                if raw_text.startswith("```json"):
+                    raw_text = raw_text.replace("```json", "", 1)
+                elif raw_text.startswith("```"):
+                    raw_text = raw_text.replace("```", "", 1)
+                if raw_text.endswith("```"):
+                    raw_text = raw_text.rsplit("```", 1)[0]
+                    
+                return json.loads(raw_text.strip())
+
+        # 4. 모든 모델이 429(Limit: 0)으로 막혀서 실패한 경우
+        st.error("⚠️ 구글 서버 확인 결과: 현재 사용 가능한 모든 무료 할당량이 0으로 막혀있습니다. 구글 AI 스튜디오에서 결제 카드 등록이 필요합니다.")
+        return []
         
     except Exception as e:
-        st.error(f"AI가 여행 일정을 짜는 중 에러가 발생했습니다: {e}")
+        st.error(f"시스템 오류: {e}")
         return []
 
 # --- 사이드바: 조건 입력 ---
