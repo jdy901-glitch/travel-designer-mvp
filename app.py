@@ -4,7 +4,7 @@ import google.generativeai as genai
 from datetime import datetime
 
 # 1. AI 및 구글 시트 기본 세팅 (보안상 파일 연동)
-GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"  # <--여기에 파트너의 실제 API 키를 넣어주세요!
+GEMINI_API_KEY = "AQ.Ab8RN6KknEyEQScwWPLis9bBKaq-fJFTN2GIapf9Gn8iJf_hXQ"  # <--여기에 파트너의 실제 API 키를 넣어주세요!
 genai.configure(api_key=GEMINI_API_KEY)
 
 # 구글 시트 연결 함수
