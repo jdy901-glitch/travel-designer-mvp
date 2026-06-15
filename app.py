@@ -6,16 +6,16 @@ import google.generativeai as genai
 import gspread
 from google.oauth2.service_account import Credentials
 
-# --- 페이지 설정 ---
+# --- 1. 페이지 및 기본 설정 ---
 st.set_page_config(page_title="AI 여행 디자이너", page_icon="✈️", layout="centered")
 
-# --- Gemini API 설정 (소믈리에 앱의 영광을 다시 한번!) ---
+# --- 2. 제미나이 AI 세팅 ---
+# 스트림릿 금고(Secrets)에서 제미나이 키를 꺼내옵니다.
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-# AI가 무조건 JSON 형태로만 대답하도록 강제하는 설정입니다.
 generation_config = {"response_mime_type": "application/json"}
 model = genai.GenerativeModel('gemini-1.5-flash', generation_config=generation_config)
 
-# --- 구글 시트 인증 (기존 로직 동일) ---
+# --- 3. 구글 시트 출입증 세팅 (와인 앱 방식과 100% 동일) ---
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 certs = {
     "type": st.secrets["gcp_service_account"]["type"],
@@ -32,18 +32,18 @@ certs = {
 creds = Credentials.from_service_account_info(certs, scopes=scope)
 gc = gspread.authorize(creds)
 
-# --- Session State 초기화 ---
+# --- 4. 임시 저장소(Session State) 초기화 ---
 if "itinerary" not in st.session_state:
     st.session_state.itinerary = []
 if "locked_states" not in st.session_state:
     st.session_state.locked_states = {}
 
-# --- 제미나이 호출 함수 ---
+# --- 5. 제미나이에게 일정 짜달라고 부탁하는 함수 ---
 def ask_ai_designer(prompt):
     try:
         response = model.generate_content(prompt)
         raw_text = response.text.strip()
-        # 제미나이가 혹시라도 마크다운 기호를 붙여줄 경우를 대비한 안전장치
+        # 마크다운 찌꺼기 제거 안전장치
         if raw_text.startswith("```json"):
             raw_text = raw_text.replace("```json", "", 1)
         if raw_text.endswith("```"):
@@ -54,10 +54,10 @@ def ask_ai_designer(prompt):
         st.error("AI가 여행 일정을 짜는 중 고민에 빠졌습니다. 다시 버튼을 눌러주세요!")
         return []
 
-# --- 구글 시트 저장 함수 ---
+# --- 6. 구글 시트에 기록 저장하는 함수 ---
 def save_to_google_sheet(destination, days, intensity, companions, itinerary_data):
     try:
-        # ⚠️ 만약 새로 만든 시트 이름이 다르면 아래 이름을 꼭 수정해 주세요!
+        # ⚠️ 1단계에서 새로 만드신 구글 시트 이름을 여기에 적어주세요.
         sh = gc.open("여행 디자이너 기록") 
         worksheet = sh.get_worksheet(0)
         
@@ -69,14 +69,14 @@ def save_to_google_sheet(destination, days, intensity, companions, itinerary_dat
     except Exception as e:
         st.error(f"구글 시트 저장 실패: {e}")
 
-# --- 사이드바: 1단계 조건 입력 ---
+# --- 7. 화면 구성 (사이드바 - 조건 입력) ---
 with st.sidebar:
     st.header("✈️ 여행 조건 입력")
-    destination = st.text_input("목적지", placeholder="예: 나트랑, 오사카, 제주도")
+    destination = st.text_input("목적지", placeholder="예: 나트랑, 제주도, 오사카")
     days = st.number_input("여행 기간 (일)", min_value=1, max_value=14, value=3)
     intensity = st.slider("희망 여행 강도", min_value=1, max_value=10, value=5, help="1: 휴양 ~ 10: 빡빡한 일정")
-    companions = st.text_input("인원 구성", placeholder="예: 18개월 아기, 아내, 나")
-    base_comment = st.text_area("추가 요청사항 (선택)", placeholder="예: 동선은 최대한 짧게")
+    companions = st.text_input("인원 구성", placeholder="예: 우진이, 아내, 나")
+    base_comment = st.text_area("추가 요청사항 (선택)", placeholder="예: 동선은 최대한 짧게, 유모차 다니기 편한 곳")
     
     if st.button("✨ 첫 번째 여행 코스 짜기", use_container_width=True):
         if destination:
@@ -95,7 +95,7 @@ with st.sidebar:
         else:
             st.warning("목적지를 입력해 주세요!")
 
-# --- 메인 화면: 2단계 코스 튜닝 ---
+# --- 8. 화면 구성 (메인 화면 - 코스 확인 및 수정) ---
 st.title("🗺️ 나의 맞춤형 여행 코스")
 
 if not st.session_state.itinerary:
