@@ -1,15 +1,11 @@
 import streamlit as st
 import json
-import google.generativeai as genai
+import requests
 
 # --- 페이지 설정 ---
 st.set_page_config(page_title="AI 여행 디자이너", page_icon="✈️", layout="centered")
 
-# --- Gemini API 설정 ---
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-# 💡 에러를 내던 1.5나 2.0 숫자를 빼고, 구글이 무조건 열어주는 가장 기본 깡통 모델(gemini-pro)로 우회합니다.
-# 💡 JSON 강제 설정도 에러의 원인이 될 수 있어 아예 빼버렸습니다.
-model = genai.GenerativeModel('gemini-pro')
+API_KEY = st.secrets["GEMINI_API_KEY"]
 
 # --- 임시 저장소(Session State) 초기화 ---
 if "itinerary" not in st.session_state:
@@ -17,24 +13,38 @@ if "itinerary" not in st.session_state:
 if "locked_states" not in st.session_state:
     st.session_state.locked_states = {}
 
-# --- 제미나이 호출 함수 ---
+# --- 제미나이 직통 호출 함수 (SDK 미사용) ---
 def ask_ai_designer(prompt):
+    # 구글 라이브러리 없이 직접 서버로 요청을 쏩니다. (버전 꼬임 절대 없음)
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+    headers = {'Content-Type': 'application/json'}
+    data = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"responseMimeType": "application/json"}
+    }
+    
     try:
-        response = model.generate_content(prompt)
-        raw_text = response.text.strip()
+        response = requests.post(url, headers=headers, json=data)
         
-        # 찌꺼기 텍스트 걷어내기 (더 강력하게 수정)
+        if response.status_code != 200:
+            st.error(f"구글 서버 거절: {response.text}")
+            return []
+            
+        result = response.json()
+        raw_text = result['candidates'][0]['content']['parts'][0]['text'].strip()
+        
+        # 마크다운 찌꺼기 걷어내기
         if raw_text.startswith("```json"):
             raw_text = raw_text.replace("```json", "", 1)
         elif raw_text.startswith("```"):
             raw_text = raw_text.replace("```", "", 1)
-            
         if raw_text.endswith("```"):
             raw_text = raw_text.rsplit("```", 1)[0]
             
         return json.loads(raw_text.strip())
+        
     except Exception as e:
-        st.error(f"AI가 여행 일정을 짜는 중 고민에 빠졌습니다: {e}")
+        st.error(f"AI가 여행 일정을 짜는 중 에러가 발생했습니다: {e}")
         return []
 
 # --- 사이드바: 조건 입력 ---
