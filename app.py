@@ -48,7 +48,7 @@ if st.button("✨ 맞춤형 여행 코스 짜기", use_container_width=True):
         with st.spinner("🤖 AI 소믈리에가 완벽한 코스를 짜고 있습니다..."):
             try:
                 # Gemini 프롬프트 구성 (AI에게 역할 부여)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('gemini-2.5-flash')
 
                 prompt = f"""
                 너는 10년 경력의 베테랑 베테랑 여행 가이드 수석 디렉터야. 아래 조건에 맞는 완벽한 여행 코스를 짜줘.
