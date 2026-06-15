@@ -7,6 +7,7 @@ from google.genai import types
 st.set_page_config(page_title="AI 여행 디자이너", page_icon="✈️", layout="centered")
 
 # --- Gemini API 설정 ---
+# 스트림릿 금고(Secrets)에서 방금 만든 새 열쇠를 꺼내옵니다.
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 # --- 임시 저장소(Session State) 초기화 ---
@@ -18,9 +19,9 @@ if "locked_states" not in st.session_state:
 # --- 제미나이 호출 함수 ---
 def ask_ai_designer(prompt):
     try:
-        # 💡 바로 이 부분! 무료로 넉넉히 쓸 수 있는 1.5 버전으로 숫자를 낮췄습니다.
+        # 💡 최신 2.0 모델 적용 완료!
         response = client.models.generate_content(
-            model='gemini-1.5-flash', 
+            model='gemini-2.0-flash', 
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
