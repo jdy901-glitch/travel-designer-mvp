@@ -6,8 +6,7 @@ from google.genai import types
 # --- 페이지 설정 ---
 st.set_page_config(page_title="AI 여행 디자이너", page_icon="✈️", layout="centered")
 
-# --- Gemini API 설정 (최신 SDK 적용!) ---
-# 구형 라이브러리 대신 2026년형 최신 google-genai 라이브러리를 사용합니다.
+# --- Gemini API 설정 ---
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 # --- 임시 저장소(Session State) 초기화 ---
@@ -19,9 +18,9 @@ if "locked_states" not in st.session_state:
 # --- 제미나이 호출 함수 ---
 def ask_ai_designer(prompt):
     try:
-        # 최신 문법에 맞춘 제미나이 호출 방식
+        # 💡 바로 이 부분! 무료로 넉넉히 쓸 수 있는 1.5 버전으로 숫자를 낮췄습니다.
         response = client.models.generate_content(
-            model='gemini-2.0-flash', 
+            model='gemini-1.5-flash', 
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -34,7 +33,6 @@ def ask_ai_designer(prompt):
             raw_text = raw_text.rsplit("```", 1)[0]
         return json.loads(raw_text.strip())
     except Exception as e:
-        # 혹시라도 에러가 나면 무슨 에러인지 화면에 직접 띄워주는 기능 추가
         st.error(f"AI가 여행 일정을 짜는 중 고민에 빠졌습니다: {e}")
         return []
 
