@@ -3,21 +3,18 @@ import gspread
 import google.generativeai as genai
 from datetime import datetime
 
-# 🔒 [보안 개선] 스트림릿 자체 금고(Secrets)에서 키를 안전하게 가져옵니다.
+# 🔒 제미니 키는 스트림릿 금고(Secrets)에서 안전하게 가져옵니다.
 try:
     GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=GEMINI_API_KEY)
 except Exception as e:
-    st.error("Gemini API 키가 설정되지 않았습니다. Streamlit Cloud의 Secrets 설정을 확인해주세요.")
+    st.error("Gemini API 키가 설정되지 않았습니다. Streamlit Secrets 설정을 확인해주세요.")
 
 # 구글 시트 연결 및 데이터 누적 저장 함수
 def save_to_google_sheet(destination, duration, members, intensity, comment, course, feedback):
     try:
-        # [보안 개선] 구글 서비스 계정 키(JSON) 내용도 금고에서 바로 읽어옵니다!
-        # 이렇게 하면 travel-key.json 파일도 깃허브에 올릴 필요가 없어집니다.
-        secret_credentials = dict(st.secrets["gspread_credentials"])
-        gc = gspread.service_account_from_dict(secret_credentials)
-        
+        # 기존 성공 방식대로 깃허브에 올린 travel-key.json 파일로 로그인합니다.
+        gc = gspread.service_account(filename='travel-key.json')
         sh = gc.open("my_travel_guide_db")
         worksheet = sh.worksheet("history")
         
@@ -79,7 +76,7 @@ if st.session_state['ai_course_result']:
     st.subheader("🗓️ 추천된 여행 코스")
     
     course_lines = st.session_state['ai_course_result'].split('\n')
-    st.info("💡 마음에 들는 일정은 체크하고, 수정하고 싶은 내용은 아래에 코멘트를 남겨보세요.")
+    st.info("💡 마음에 드는 일정은 체크하고, 수정하고 싶은 내용은 아래에 코멘트를 남겨보세요.")
     
     for idx, line in enumerate(course_lines):
         if line.strip():
